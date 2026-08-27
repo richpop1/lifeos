@@ -1,0 +1,911 @@
+generator client {
+    provider = "prisma-client-js"
+    binaryTargets = ["native", "linux-musl-arm64-openssl-3.0.x"]
+    output = "/home/ubuntu/life_os/nextjs_space/node_modules/.prisma/client"
+}
+
+datasource db {
+    provider = "postgresql"
+    url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String
+  emailVerified DateTime?
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  lifeScores    LifeScore[]
+  journalEntries JournalEntry[]
+  goals         Goal[]
+  tasks         Task[]
+  transactions  Transaction[]
+  investments   Investment[]
+  budgets       Budget[]
+  habits        Habit[]
+  profile       UserProfile?
+  emailAccounts EmailAccount[]
+  emails        Email[]
+  calendarEvents CalendarEvent[]
+  calendarSubs  CalendarSubscription[]
+  dailyFocus    DailyFocus[]
+  contacts         Contact[]
+  contactGroups    ContactGroup[]
+  financeAccounts  FinanceAccount[]
+  transactionRules TransactionRule[]
+  transactionTags  TransactionTag[]
+  insights         Insight[]
+  aiBatchActions   AiBatchAction[]
+  activityFeed     ActivityFeed[]
+  exercises        Exercise[]
+  workoutTemplates WorkoutTemplate[]
+  workoutSessions  WorkoutSession[]
+  personalRecords  PersonalRecord[]
+  exerciseNotes    ExerciseNote[]
+
+  // Butler Core
+  memories            Memory[]
+  openLoops           OpenLoop[]
+  reflectionSessions  ReflectionSession[]
+  decisions           Decision[]
+  agentRuns           AgentRun[]
+  events              Event[]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model LifeScore {
+  id        String   @id @default(cuid())
+  userId    String
+  date      DateTime
+  note      String?
+
+  activeIncome    Int @default(5)
+  passiveIncome   Int @default(5)
+  riskManagement  Int @default(5)
+  personalBudget  Int @default(5)
+
+  physical   Int @default(5)
+  emotional  Int @default(5)
+  mental     Int @default(5)
+  spiritual  Int @default(5)
+
+  partner    Int @default(5)
+  family     Int @default(5)
+  friends    Int @default(5)
+  community  Int @default(5)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, date])
+}
+
+model JournalEntry {
+  id             String   @id @default(cuid())
+  userId         String
+  sessionType    String   // 'morning' | 'evening'
+  moodStart      String?  // emoji key
+  moodEnd        String?  // emoji key
+  energy         Int?     // 1-5 energy level
+  responses      Json     // array of { question, answer }
+  chatMessages   Json?    // full AI conversation log
+  dayTitle       String?  // one-line emotional title of the day
+  focusItem      String?  // ONE thing worth attention
+  cleanWin       String?  // what does finished mean
+  focusRazor     String?  // what to ignore
+  signal         String?  // one pattern/realization
+  personalMirror String?  // owned/carried, chose/reacted
+  humanClose     String?  // one line of humanity
+  dailyLine      String?  // sentence worth rereading
+  razorSummary   String?  // AI-generated razor summary
+  keyMemories    Json?    // array of {moment, context, emotion} — personal milestones, meaningful conversations, life events
+  ideas          Json?    // array of {idea, category, context} — business ideas, creative sparks, game concepts, etc.
+  mentionedContactIds Json? // array of contact IDs mentioned via @name in this entry
+  mediaUrls      Json?    // array of {url, type, cloudPath} — attached images/videos
+  goalId         String?  // optional project/goal context tag
+  date           DateTime @default(now())
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal           Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  linkedNotes    ContactNote[]
+
+  @@index([userId, date])
+  @@index([goalId])
+}
+
+model Goal {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  type        String   // 'long-term' | 'mid-term' | 'short-term'
+  pillar      String?  // 'wealth' | 'health' | 'relationship'
+  status      String   @default("active") // 'active' | 'completed' | 'archived'
+  progress    Int      @default(0)
+  targetDate  DateTime?
+  weight      Int      @default(5)  // 1-10 importance for AI prioritization
+  isProject   Boolean  @default(false) // true = treat as project container
+  target      Float?   // numeric target value (e.g. 15000 for $15k income)
+  current     Float?   // auto-calculated current value
+  unit        String?  // display unit: '$', 'kg', '%', 'streak', 'count'
+  metricSource String? // 'transactions' | 'habits' | 'life_score' | 'tasks' | 'manual'
+  metricConfig Json?   // source-specific config: {category, habitId, scoreField, dateRange, etc.}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks       Task[]
+  journalEntries JournalEntry[]
+  habits      Habit[]
+
+  @@index([userId, status])
+}
+
+model Task {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  pillar      String?  // 'wealth' | 'health' | 'relationship'
+  goalId      String?
+  status      String   @default("todo") // 'todo' | 'in-progress' | 'done'
+  priority    String   @default("medium") // 'low' | 'medium' | 'high'
+  isNeedleMover Boolean @default(false)
+  dueDate     DateTime?
+  startDate   DateTime?  // when work should begin
+  scheduledDate DateTime? // AI-assigned calendar date
+  scheduledStartTime DateTime? // exact start time on calendar
+  scheduledEndTime   DateTime? // exact end time on calendar
+  estimatedMins Int?     // AI-suggested duration in minutes
+  actualMins    Int?     // user-recorded actual duration (for learning)
+  aiUrgency   String?   // 'critical' | 'high' | 'medium' | 'low' | 'defer'
+  aiRecommendation String? // AI-generated action suggestion
+  linkedHabitId String?  // optional link to a habit
+  northStarAlign Int?    // 1-10 alignment score with north star
+  subtasks    Json?    // array of {title: string, done: boolean}
+  notes       String?  // free-form notes on the task
+  resolution  String?  // 'completed' | 'wont_do' | 'delegated' | 'deferred' | 'irrelevant'
+  resolvedReason String? // why task was resolved this way
+  resolvedAt  DateTime?  // when task was resolved
+  delegatedTo String?  // who it was delegated to
+  contributionType String? // 'direct' | 'enabler' | 'maintenance' | 'exploratory'
+  triageStatus String?  // null = user-created (accepted), 'pending' = AI-created awaiting review, 'accepted' = AI-created & approved, 'dismissed' = AI-created & rejected
+  sourceEmailId String? // email that generated this task (for traceability)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal        Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  calendarEvents CalendarEvent[]
+
+  @@index([userId, status])
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  userId          String
+  amount          Float
+  type            String   // 'income' | 'expense' | 'transfer' | 'refund' | 'investment' | 'iou'
+  investmentType  String?  // 'buy' | 'sell' | 'dividend' | 'capital_gain' (only when type='investment')
+  category        String
+  note            String?
+  tags            Json?    // string[] of tag paths e.g. ["Food / Hawker", "Transport"]
+  accountId       String?
+  date            DateTime @default(now())
+  dedupHash       String?  // SHA256(amount+date+note) for duplicate detection
+  status          String   @default("confirmed") // 'confirmed' | 'pending' — pending = needs user review
+  source          String?  // 'manual' | 'csv_import' | 'email_ingest' | 'api_sync'
+  sourceEmailId   String?  // email.id that produced this transaction
+  matchConfidence Float?   // 0-1 confidence of account auto-match
+  createdAt       DateTime @default(now())
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account         FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([userId, date])
+  @@index([accountId])
+  @@index([userId, dedupHash])
+  @@index([userId, status])
+  @@index([sourceEmailId])
+}
+
+model Investment {
+  id         String   @id @default(cuid())
+  userId     String
+  platform   String   // 'Tiger Brokers' | 'Coinhako' | 'Crypto.com' | 'Syfe' | 'Other'
+  assetName  String
+  ticker     String?  // Stock ticker (e.g. AAPL) or crypto id (e.g. bitcoin)
+  quantity   Float    @default(0) // Number of shares/units held
+  type       String   // 'stock' | 'crypto' | 'etf' | 'insurance' | 'other'
+  value      Float    @default(0)
+  costBasis  Float    @default(0)
+  currency   String   @default("USD")
+  renewalDate DateTime?
+  note       String?
+  accountId  String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account    FinanceAccount? @relation(fields: [accountId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([accountId])
+}
+
+model Habit {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  pillar      String?  // 'wealth' | 'health' | 'relationship'
+  frequency   String   @default("daily") // 'daily' | 'weekdays' | 'custom'
+  customDays  Json?    // [0,1,2,3,4,5,6] for custom (0=Sun)
+  targetTime  String?  // e.g. '07:00' preferred time
+  reminderEnabled Boolean @default(false)
+  icon        String?  // emoji icon
+  color       String?  // hex color
+  goalId      String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  goal        Goal?    @relation(fields: [goalId], references: [id], onDelete: SetNull)
+  logs        HabitLog[]
+
+  @@index([userId, isActive])
+  @@index([goalId])
+}
+
+model HabitLog {
+  id       String   @id @default(cuid())
+  habitId  String
+  date     DateTime
+  done     Boolean  @default(true)
+  habit    Habit    @relation(fields: [habitId], references: [id], onDelete: Cascade)
+
+  @@unique([habitId, date])
+  @@index([habitId, date])
+}
+
+model UserProfile {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  mission   String?  // Personal mission statement
+  identity  String?  // Who you want to become
+  alterEgoName        String?  // Alter ego name
+  alterEgoDescription String?  // Who is this person
+  alterEgoTraits      Json?    // Array of key traits/values
+  alterEgoMantra      String?  // Daily mantra from alter ego
+  northStar           String?  // Freedom goal statement
+  aiPreferences       Json?    // {taskRules: string[], emailRules: string[], replyTone: string, priorities: string[]}
+  calFeedToken        String?  // Token for public iCal feed
+  lastActiveAt        DateTime? // when user last closed/backgrounded the app
+  lastBriefingAt      DateTime? // when they last consumed the daily briefing
+  sessionContext      Json?     // {lastTab, scrollPosition, pendingApprovals}
+  autoArchiveThreshold Float    @default(0.85) // AI confidence threshold to auto-act
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model Budget {
+  id        String   @id @default(cuid())
+  userId    String
+  category  String
+  amount    Float
+  month     Int
+  year      Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category, month, year])
+}
+
+model EmailAccount {
+  id          String   @id @default(cuid())
+  userId      String
+  label       String   // e.g. 'Personal Gmail', 'Work'
+  email       String   // email address
+  smtpHost    String
+  smtpPort    Int      @default(587)
+  imapHost    String
+  imapPort    Int      @default(993)
+  encryptedPassword String // AES-256-GCM encrypted
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  emails      Email[]
+
+  @@index([userId])
+}
+
+model Email {
+  id             String   @id @default(cuid())
+  userId         String
+  accountId      String
+  messageId      String?  // IMAP message ID
+  threadId       String?  // for grouping conversations
+  folder         String   @default("INBOX")
+  fromAddress    String
+  fromName       String?
+  toAddress      String
+  subject        String
+  bodyText       String?  // plain text
+  bodyHtml       String?  // HTML version
+  date           DateTime
+  isRead         Boolean  @default(false)
+  isStarred      Boolean  @default(false)
+  labels         Json?    // AI-assigned labels/tags
+  aiSummary      String?  // AI one-line summary
+  aiUrgency      String?  // 'critical' | 'high' | 'medium' | 'low'
+  aiCategory     String?  // 'action-required' | 'fyi' | 'newsletter' | 'personal' | 'finance'
+  aiAction       String?  // 'reply_needed' | 'add_task' | 'read_later' | 'archive' | 'delete' | 'auto_reply'
+  aiActionDetail String?  // AI-generated action detail (e.g. draft reply, task title)
+  aiDraftReply   String?  // AI-drafted reply text
+  northStarAlign Int?     // 1-10 alignment score
+  userAction     String?  // what the user actually did: 'archive' | 'delete' | 'reply' | 'task' | 'ignore'
+  userActionAt   DateTime? // when the user took action
+  aiConfidence   Float?    // 0.0-1.0 confidence in aiAction
+  autoProcessed  Boolean   @default(false) // true = AI acted without explicit user approval
+  autoProcessedAt DateTime? // when AI auto-processed it
+  createdAt      DateTime @default(now())
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  account        EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@unique([accountId, messageId])
+  @@index([userId, date])
+  @@index([userId, isRead])
+}
+
+model DailyFocus {
+  id          String   @id @default(cuid())
+  userId      String
+  date        DateTime // date only, stored as midnight UTC
+  focusItems  Json     // [{title, reason, taskId?, goalId?, pillar?, urgency?}]
+  aiSummary   String?  // AI-generated "why these 3" explanation
+  completed   Json?    // [{taskId, completedAt}]
+  reflection  String?  // evening reflection text
+  briefingText String? // AI-generated morning briefing markdown
+  briefingData Json?   // structured briefing: {events[], tasksDue, habitsToday, goalUpdates[], alerts[]}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, date])
+  @@index([userId, date])
+}
+
+model ContactGroup {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String   // e.g. 'Inner Circle', 'Work', 'Acquaintances'
+  color     String   @default("#6B8F71") // hex color
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  contacts  Contact[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model Contact {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String
+  nickname        String?
+  email           String?
+  phone           String?
+  company         String?
+  role            String?   // job title / role
+  relationship    String    @default("acquaintance") // 'family' | 'close_friend' | 'friend' | 'work' | 'mentor' | 'acquaintance'
+  groupId         String?
+  avatar          String?   // URL to photo
+  birthday        String?   // stored as MM-DD or YYYY-MM-DD
+  howWeMet        String?   // story of how you met
+  interests       Json?     // array of strings
+  familyNotes     String?   // e.g. "Wife: Sarah, Kids: Liam (3), Ella (1)"
+  socialLinks     Json?     // { linkedin, instagram, twitter, etc }
+  aliases         Json?     // array of alternate names/nicknames e.g. ["gf", "girlfriend", "babe"]
+  customDates      Json?     // [{label: 'Anniversary', date: 'YYYY-MM-DD' or 'MM-DD'}]
+  catchUpFrequency Int?     // desired days between catch-ups
+  lastContactedAt DateTime? // auto-updated from notes or email
+  isFavorite      Boolean   @default(false)
+  isArchived      Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group           ContactGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  notes           ContactNote[]
+
+  @@index([userId, isArchived])
+  @@index([userId, lastContactedAt])
+}
+
+model ContactNote {
+  id             String       @id @default(cuid())
+  contactId      String
+  type           String       @default("note") // 'note' | 'meeting' | 'call' | 'email' | 'catch_up' | 'happy_memory' | 'journal_link'
+  content        String
+  date           DateTime     @default(now())
+  journalEntryId String?      // optional link back to the journal entry that created this note
+  createdAt      DateTime     @default(now())
+  contact        Contact      @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  journalEntry   JournalEntry? @relation(fields: [journalEntryId], references: [id], onDelete: SetNull)
+
+  @@index([contactId, date])
+  @@index([journalEntryId])
+}
+
+model CalendarEvent {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  description String?
+  startTime   DateTime
+  endTime     DateTime?
+  allDay      Boolean  @default(false)
+  location    String?
+  color       String?  // hex color
+  source      String   @default("manual") // 'manual' | 'subscription' | 'task' | 'habit'
+  sourceId    String?  // ID of the subscription/task/habit
+  goalId      String?  // link to goal
+  taskId      String?  // link to task
+  recurrence  String?  // RRULE string
+  externalUid String?  // UID from iCal feed
+  subId       String?  // CalendarSubscription id
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task        Task?    @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  subscription CalendarSubscription? @relation(fields: [subId], references: [id], onDelete: SetNull)
+
+  @@index([userId, startTime])
+  @@index([subId])
+}
+
+model CalendarSubscription {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String   // e.g. 'Google Calendar', 'Work Calendar'
+  url        String   // iCal URL
+  color      String   @default("#6366f1") // hex color
+  isActive   Boolean  @default(true)
+  lastSynced DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events     CalendarEvent[]
+
+  @@index([userId])
+}
+
+model FinanceAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  name            String   // "Tiger Brokers", "DBS Savings", etc.
+  type            String   // 'investment' | 'bank' | 'crypto' | 'cash' | 'credit'
+  provider        String   @default("manual") // 'tiger' | 'crypto_com' | 'coinhako' | 'syfe' | 'manual'
+  currency        String   @default("SGD")
+  balance         Float    @default(0)  // For bank/cash accounts, or total for synced accounts
+  icon            String?  // emoji or icon name
+  color           String?  // hex color
+  apiConfig       String?  // AES-256 encrypted JSON with API credentials
+  syncEnabled     Boolean  @default(false)
+  lastSynced      DateTime?
+  isActive        Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  investments     Investment[]
+  transactions    Transaction[]
+
+  @@index([userId])
+}
+
+model TransactionTag {
+  id       String  @id @default(cuid())
+  userId   String
+  name     String  // e.g. "Food" or "Hawker" (leaf name)
+  fullPath String  // e.g. "Food / Hawker" (display path)
+  parentId String? // self-relation for hierarchy
+  color    String? // optional hex color
+  parent   TransactionTag?  @relation("TagHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children TransactionTag[] @relation("TagHierarchy")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fullPath])
+  @@index([userId])
+}
+
+model TransactionRule {
+  id         String   @id @default(cuid())
+  userId     String
+  name       String
+  conditions Json     // [{field: 'note', op: 'contains', value: 'grab'}]
+  actions    Json     // [{type: 'tag', value: 'Transport'}, {type: 'category', value: 'Food'}]
+  priority   Int      @default(0)
+  isActive   Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Insight {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // pattern, nudge, warning, opportunity, streak
+  category    String    // health, wealth, relationship, productivity
+  title       String
+  body        String
+  data        Json?     // supporting data points, metrics
+  priority    Int       @default(3) // 1-5
+  isRead      Boolean   @default(false)
+  isDismissed Boolean   @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isDismissed, createdAt])
+}
+
+// ═══ AI AGENCY ═══
+
+model AiBatchAction {
+  id        String   @id @default(cuid())
+  userId    String
+  type      String   // 'archive' | 'delete' | 'task_create' | 'spam'
+  status    String   @default("pending_approval") // 'pending_approval' | 'approved' | 'rejected' | 'partial'
+  items     Json     // [{emailId, subject, from, aiConfidence, aiAction}]
+  approvedIds Json?  // subset of item IDs user approved (for partial)
+  rejectedIds Json?  // subset user rescued/rejected
+  approvedAt DateTime?
+  createdAt  DateTime @default(now())
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, createdAt])
+}
+
+// ═══ ACTIVITY FEED (DELTA ENGINE) ═══
+
+model ActivityFeed {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String   // 'email_new' | 'email_auto_archived' | 'task_due' | 'task_created' | 'event_changed' | 'habit_due' | 'ai_action' | 'goal_progress'
+  entityId   String?  // ID of related entity
+  entityType String?  // 'email' | 'task' | 'event' | 'habit' | 'goal'
+  title      String   // pre-rendered headline
+  subtitle   String?  // secondary info
+  isRead     Boolean  @default(false)
+  metadata   Json?    // extra context
+  createdAt  DateTime @default(now())
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt])
+  @@index([userId, createdAt])
+}
+
+// ═══ GYM / WORKOUT TRACKING ═══
+
+model Exercise {
+  id          String   @id @default(cuid())
+  userId      String?  // null = system exercise, userId = custom
+  name        String
+  muscleGroup String   // chest, back, legs, shoulders, arms, core, cardio, full_body
+  equipment   String?  // barbell, dumbbell, cable, machine, bodyweight, kettlebell, band, none
+  guide       String?  // movement instructions
+  imageUrl    String?  // exercise demonstration image
+  category    String?  // compound, isolation, cardio, stretch
+  formCues    Json?    // generic form pointers/cues: string[] (cached, shared reference data)
+  animationUrl String? // demonstration animation/illustration of the movement
+  isCustom    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sets        WorkoutSet[]
+  records     PersonalRecord[]
+  notes       ExerciseNote[]
+
+  @@index([userId])
+  @@index([muscleGroup])
+}
+
+// Per-user remarks on an exercise (system exercises are shared, so notes live per-user).
+model ExerciseNote {
+  id         String   @id @default(cuid())
+  userId     String
+  exerciseId String
+  note       String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exerciseId])
+  @@index([userId])
+}
+
+model WorkoutTemplate {
+  id          String   @id @default(cuid())
+  userId      String
+  name        String
+  description String?
+  targetMuscles Json?  // ['chest','triceps'] etc
+  exercises   Json     // [{exerciseId, exerciseName, sets, reps, weight?, restSeconds?, duration?}]
+  durationMins Int?    // target duration
+  isAiGenerated Boolean @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessions    WorkoutSession[]
+
+  @@index([userId])
+}
+
+model WorkoutSession {
+  id          String   @id @default(cuid())
+  userId      String
+  templateId  String?
+  name        String
+  startedAt   DateTime
+  completedAt DateTime?
+  durationMins Int?    // actual duration
+  notes       String?
+  mood        Int?     // 1-5 post-workout mood
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template    WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  sets        WorkoutSet[]
+
+  @@index([userId])
+  @@index([userId, startedAt])
+}
+
+model WorkoutSet {
+  id          String   @id @default(cuid())
+  sessionId   String
+  exerciseId  String
+  setNumber   Int
+  weight      Float?   // kg
+  reps        Int?
+  duration    Int?     // seconds (for timed exercises like planks)
+  distance    Float?   // km (for cardio)
+  isWarmup    Boolean  @default(false)
+  isDropSet   Boolean  @default(false)
+  isPR        Boolean  @default(false)
+  rpe         Int?     // rate of perceived exertion 1-10
+  notes       String?
+  createdAt   DateTime @default(now())
+  session     WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise    Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+  @@index([exerciseId])
+}
+
+model PersonalRecord {
+  id          String   @id @default(cuid())
+  userId      String
+  exerciseId  String
+  recordType  String   // max_weight, max_reps, max_volume, best_time, max_distance, est_1rm
+  value       Float
+  achievedAt  DateTime
+  sessionId   String?
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise    Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+
+  @@index([userId, exerciseId])
+  @@index([userId, recordType])
+}
+
+// ═══════════════════════════════════════════
+// BUTLER CORE — Agent Infrastructure
+// ═══════════════════════════════════════════
+
+// Persistent knowledge the butler accumulates about the user.
+// Types: profile (facts), episodic (events), semantic (patterns), working (session context).
+model Memory {
+  id          String    @id @default(cuid())
+  userId      String
+  type        String    // 'profile' | 'episodic' | 'semantic' | 'working'
+  key         String    // namespaced key: "contact.marcus.birthday", "pattern.defer_finance"
+  content     String    // the actual memory content (plain text or JSON string)
+  weight      Float     @default(1.0)  // relevance weight (0.0-1.0, decays over time)
+  decay       Float     @default(0.01) // decay rate per day (0 = permanent)
+  provenance  String?   // 'journal' | 'email' | 'capture' | 'pattern_engine' | 'user_edit'
+  entityType  String?   // optional link: 'contact' | 'goal' | 'task' | 'email'
+  entityId    String?   // optional link to specific entity
+  embedding   Bytes?    // optional vector embedding for semantic recall
+  expiresAt   DateTime? // hard expiry (null = never)
+  isArchived    Boolean   @default(false)
+  decayAnchorAt DateTime  @default(now()) // decay clock — set at creation, never bumped by unrelated writes
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // NOTE: Unique constraint for profile/semantic enforced at app layer (not DB)
+  // because episodic/working types allow multiple entries with same key pattern.
+  @@index([userId, type, key])  // fast lookup for dedup checks
+  @@index([userId, type])
+  @@index([userId, isArchived, weight])
+}
+
+// Anything unresolved living in the user's head. Core unit of the butler.
+model OpenLoop {
+  id           String    @id @default(cuid())
+  userId       String
+  content      String    // "Call dentist for cleaning"
+  context      Json?     // [{timestamp, note, source}] — accumulates on repeated captures
+  emotion      String?   // 'anxious' | 'guilty' | 'excited' | 'neutral'
+  source       String    // 'capture' | 'email' | 'task' | 'contact' | 'calendar' | 'pattern_engine'
+  sourceId     String?   // ID of the source entity
+  type         String    @default("task") // 'task' | 'thought' | 'decision' | 'followup' | 'raw'
+  status       String    @default("open") // 'open' | 'pursued' | 'cut' | 'deferred' | 'resolved' | 'merged'
+  resolution   String?   // how it was resolved
+  pillar       String?   // 'wealth' | 'health' | 'relationship'
+  urgency      String    @default("medium") // 'critical' | 'high' | 'medium' | 'low'
+  dedupKey     String?   // normalized key for dedup matching
+  mentionCount Int       @default(1)
+  deferCount   Int       @default(0)
+  nextStep     String?   // butler-suggested or user-set next action
+  wakeDate     DateTime? // deferred until this date (null = active now)
+  resolvedAt   DateTime?
+  linkedLoopId String?   // if merged, points to the surviving loop
+  aiConfidence Float?    // 0.0-1.0 for auto-detected loops
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([userId, status, wakeDate])
+  @@index([userId, dedupKey])
+  @@index([userId, source])
+}
+
+// One nightly review session. READS from JournalEntry, never replaces it.
+model ReflectionSession {
+  id              String    @id @default(cuid())
+  userId          String
+  mode            String    // 'short' | 'deep' | 'catchup'
+  status          String    @default("active") // 'active' | 'completed' | 'abandoned'
+  loopsReviewed   Int       @default(0)
+  loopsCut        Int       @default(0)
+  loopsPursued    Int       @default(0)
+  loopsDeferred   Int       @default(0)
+  loopsResolved   Int       @default(0)
+  mood            String?
+  transcript      Json?     // [{role, content, timestamp}]
+  patternsSurfaced Json?    // [{patternId, text, userResponse}]
+  tomorrowFocus   Json?     // [{title, reason, pillar, taskId?, goalId?}]
+  dailyLine       String?
+  journalEntryId  String?   // optional link to existing JournalEntry for same day
+  durationSecs    Int?
+  triggeredBy     String?   // 'daemon_push' | 'user_opened' | 'catchup'
+  startedAt       DateTime  @default(now())
+  completedAt     DateTime?
+  createdAt       DateTime  @default(now())
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, status])
+}
+
+// 1-3-1 decision engine: 1 problem, 3 options, 1 recommendation.
+model Decision {
+  id            String    @id @default(cuid())
+  userId        String
+  problem       String
+  options       Json      // [{label, pros, cons, effort, risk}] — exactly 3
+  recommended   Int?      // index into options[] (0-based)
+  rationale     String?
+  status        String    @default("pending") // 'pending' | 'decided' | 'deferred' | 'dismissed'
+  chosenOption  Int?
+  urgency       String    @default("medium")
+  pillar        String?
+  sourceLoopId  String?   // OpenLoop that spawned this
+  executedRunId String?   // AgentRun that executed the chosen option (audit trace)
+  executedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+}
+
+// Every time the butler "thinks" and acts, logged here for audit.
+model AgentRun {
+  id          String     @id @default(cuid())
+  userId      String
+  trigger     String     // 'user_chat' | 'capture' | 'nightly_ritual' | 'auto_detect' | 'daemon' | 'decision'
+  status      String     @default("running") // 'running' | 'completed' | 'failed' | 'approval_needed'
+  transcript  Json?      // [{step, thought, action, result}]
+  stepsUsed   Int        @default(0)
+  stepLimit   Int        @default(10)
+  errorMsg    String?
+  startedAt   DateTime   @default(now())
+  completedAt DateTime?
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  toolCalls   ToolCall[]
+
+  @@index([userId, startedAt])
+  @@index([userId, status])
+}
+
+// Every tool the agent invokes. Audit trail + learning signal.
+// approved defaults FALSE (fail-closed). Tool registry autonomy policy flips to true for safe-tier tools.
+model ToolCall {
+  id          String    @id @default(cuid())
+  agentRunId  String
+  tool        String    // tool name, e.g. 'add_task', 'email_action', 'create_loop'
+  args        Json
+  result      Json?
+  status      String    @default("pending") // 'pending' | 'approved' | 'executed' | 'rejected' | 'failed'
+  approved    Boolean   @default(false) // fail-closed: must be explicitly set true by autonomy policy
+  approvedAt  DateTime?
+  durationMs  Int?
+  createdAt   DateTime  @default(now())
+  agentRun    AgentRun  @relation(fields: [agentRunId], references: [id], onDelete: Cascade)
+
+  @@index([agentRunId])
+  @@index([tool, createdAt])
+}
+
+// Append-only audit log. Everything that happens flows through here.
+model Event {
+  id         String   @id @default(cuid())
+  userId     String
+  type       String   // 'loop_created' | 'loop_cut' | 'reflection_started' | 'decision_decided' | etc.
+  entityType String?  // 'open_loop' | 'reflection' | 'decision' | 'memory' | 'task' | 'email'
+  entityId   String?
+  data       Json?
+  createdAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, createdAt])
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+}

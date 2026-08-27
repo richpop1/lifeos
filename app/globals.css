@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 40 20% 98%;
+    --foreground: 220 15% 15%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 15% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 15% 15%;
+
+    --primary: 160 35% 45%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 40 15% 93%;
+    --secondary-foreground: 220 15% 20%;
+
+    --muted: 40 10% 95%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 160 25% 92%;
+    --accent-foreground: 160 35% 30%;
+
+    --destructive: 0 72% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 10% 90%;
+    --input: 220 10% 90%;
+    --ring: 160 35% 45%;
+
+    --radius: 0.625rem;
+    --radius-sm: calc(0.625rem - 4px);
+    --radius-lg: calc(0.625rem + 4px);
+    --radius-full: 9999px;
+
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+    --spacing-2xl: 48px;
+    --spacing-3xl: 64px;
+
+    --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.03), 0 1px 3px 0 rgb(0 0 0 / 0.06);
+    --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+    --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.07), 0 4px 6px -4px rgb(0 0 0 / 0.05);
+
+    --duration-fast: 150ms;
+    --duration-normal: 250ms;
+    --duration-slow: 350ms;
+
+    --chart-1: 160 35% 45%;
+    --chart-2: 25 80% 55%;
+    --chart-3: 340 65% 55%;
+    --chart-4: 220 55% 50%;
+    --chart-5: 45 80% 55%;
+
+    --wealth: 160 35% 45%;
+    --health: 25 80% 55%;
+    --relationship: 340 65% 55%;
+  }
+
+  .dark {
+    --background: 220 15% 8%;
+    --foreground: 40 10% 92%;
+
+    --card: 220 15% 11%;
+    --card-foreground: 40 10% 92%;
+
+    --popover: 220 15% 11%;
+    --popover-foreground: 40 10% 92%;
+
+    --primary: 160 35% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 12% 18%;
+    --secondary-foreground: 40 10% 90%;
+
+    --muted: 220 12% 16%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 160 25% 18%;
+    --accent-foreground: 160 35% 70%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 12% 20%;
+    --input: 220 12% 20%;
+    --ring: 160 35% 50%;
+
+    --wealth: 160 35% 50%;
+    --health: 25 80% 60%;
+    --relationship: 340 65% 60%;
+  }
+
+  [data-hydration-error] {
+    display: none !important;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Safe area for bottom tab bar on iPhone */
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .game-card {
+    @apply bg-card rounded-xl border border-border/60;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  }
+  .game-card:hover {
+    box-shadow: var(--shadow-md);
+  }
+}
